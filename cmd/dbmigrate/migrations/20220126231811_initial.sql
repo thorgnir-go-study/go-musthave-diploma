@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS gophermart.users
 (
-    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
     login character varying  NOT NULL,
     password character varying NOT NULL,
     CONSTRAINT users_pkey PRIMARY KEY (id)
