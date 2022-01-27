@@ -2,18 +2,21 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 	"log"
-	"os"
 )
 
 func main() {
-	connStr, ok := os.LookupEnv("DATABASE_URI")
-	if !ok {
-		log.Fatal("database uri not set")
-	}
+	//connStr, ok := os.LookupEnv("DATABASE_URI")
+	var connStr string
+	flag.StringVar(&connStr, "database_uri", "", "blabla")
+	//if !ok {
+	//	log.Fatal("database uri not set")
+	//}
+	flag.Parse()
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
