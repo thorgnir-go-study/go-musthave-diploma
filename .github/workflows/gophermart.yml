@@ -32,7 +32,7 @@ jobs:
 
       - name: Run migrations
         run: |
-          (cd cmd/dbmigrate && dbmigrate-linux-amd64 -database-uri="postgresql://postgres:postgres@postgres/praktikum?sslmode=disable")
+          (cd cmd/dbmigrate && ls -a && dbmigrate-linux-amd64 -database-uri="postgresql://postgres:postgres@postgres/praktikum?sslmode=disable")
 
       - name: Download autotests binaries
         uses: robinraju/release-downloader@v1.2
