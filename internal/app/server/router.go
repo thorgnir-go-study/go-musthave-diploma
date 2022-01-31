@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
+	"github.com/thorgnir-go-study/go-musthave-diploma/internal/app/middlewares"
 	"net/http"
 )
 
@@ -23,14 +24,14 @@ func NewRouter(service *GophermartService) chi.Router {
 
 	// protected routes
 	r.Group(func(r chi.Router) {
-		r.Use(func(next http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				log.Info().Msg("hello from protected route middleware")
-				next.ServeHTTP(w, r)
-			})
-		})
+		r.Use(middlewares.JwtAuthMiddleware(service.JwtWrapper))
+
 		r.Get("/api/user/blabla/{x}", func(writer http.ResponseWriter, request *http.Request) {
-			writer.Write([]byte(request.RequestURI))
+			claims, err := middlewares.GetClaimsFromContext(request.Context())
+			if err != nil {
+				log.Info().Err(err).Msg("Error while getting claims from context")
+			}
+			writer.Write([]byte(claims.Login))
 			writer.WriteHeader(200)
 		})
 	})
