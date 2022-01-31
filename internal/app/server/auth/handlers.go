@@ -1,10 +1,11 @@
-package server
+package auth
 
 import (
 	"encoding/json"
 	"errors"
 	"github.com/rs/zerolog/log"
-	"github.com/thorgnir-go-study/go-musthave-diploma/internal/app/repository"
+	authRepo "github.com/thorgnir-go-study/go-musthave-diploma/internal/app/repository/auth"
+
 	"io"
 	"net/http"
 )
@@ -19,7 +20,7 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-func (s *GophermartService) RegisterHandler() http.HandlerFunc {
+func (s *Service) RegisterHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodyContent, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -35,13 +36,13 @@ func (s *GophermartService) RegisterHandler() http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		}
 
-		user, err := s.Repository.RegisterUser(r.Context(), repository.UserEntity{Login: req.Login}, req.Password)
+		user, err := s.AuthRepository.RegisterUser(r.Context(), authRepo.UserDto{Login: req.Login}, req.Password)
 		if err != nil {
-			if errors.Is(err, repository.ErrUserAlreadyExists) {
+			if errors.Is(err, authRepo.ErrUserAlreadyExists) {
 				http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
 				return
 			}
-			if errors.Is(err, repository.ErrEmptyPassword) {
+			if errors.Is(err, authRepo.ErrEmptyPassword) {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
@@ -50,7 +51,7 @@ func (s *GophermartService) RegisterHandler() http.HandlerFunc {
 			return
 		}
 
-		token, err := s.JwtWrapper.GenerateToken(user.ID, user.Login)
+		token, err := s.JwtWrapper.GenerateToken(user.UserID, user.Login)
 		if err != nil {
 			log.Error().Err(err).Msg("error generating token")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -62,7 +63,7 @@ func (s *GophermartService) RegisterHandler() http.HandlerFunc {
 	}
 }
 
-func (s *GophermartService) LoginHandler() http.HandlerFunc {
+func (s *Service) LoginHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodyContent, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
@@ -78,13 +79,13 @@ func (s *GophermartService) LoginHandler() http.HandlerFunc {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		}
 
-		user, err := s.Repository.Authenticate(r.Context(), req.Login, req.Password)
+		user, err := s.AuthRepository.Authenticate(r.Context(), req.Login, req.Password)
 		if err != nil {
-			if errors.Is(err, repository.ErrEmptyPassword) {
+			if errors.Is(err, authRepo.ErrEmptyPassword) {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
-			if errors.Is(err, repository.ErrAuthenticationFailure) {
+			if errors.Is(err, authRepo.ErrAuthenticationFailure) {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
@@ -93,7 +94,7 @@ func (s *GophermartService) LoginHandler() http.HandlerFunc {
 			return
 		}
 
-		token, err := s.JwtWrapper.GenerateToken(user.ID, user.Login)
+		token, err := s.JwtWrapper.GenerateToken(user.UserID, user.Login)
 
 		if err != nil {
 			log.Error().Err(err).Msg("error generating token")

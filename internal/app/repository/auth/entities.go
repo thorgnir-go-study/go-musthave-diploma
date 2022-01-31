@@ -1,11 +1,11 @@
-package repository
+package auth
 
-type UserEntity struct {
+type userEntity struct {
 	ID    string `db:"id"`
 	Login string `db:"login"`
 }
 
-type UserWithPassword struct {
-	UserEntity
+type userWithPassword struct {
+	userEntity
 	Password string `db:"password"`
 }

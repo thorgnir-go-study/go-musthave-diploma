@@ -1,4 +1,4 @@
-package repository
+package auth
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type gophermartPostgresRepository struct {
+type authPostgresRepository struct {
 	DB *sqlx.DB
 }
 
@@ -18,7 +18,7 @@ var (
 	authenticateUserStmt *sqlx.Stmt
 )
 
-func NewGophermartPostgresRepository(_ context.Context, dsn string) (*gophermartPostgresRepository, error) {
+func NewAuthPostgresRepository(_ context.Context, dsn string) (*authPostgresRepository, error) {
 	db, err := sqlx.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewGophermartPostgresRepository(_ context.Context, dsn string) (*gophermart
 		return nil, err
 	}
 
-	return &gophermartPostgresRepository{DB: db}, nil
+	return &authPostgresRepository{DB: db}, nil
 }
 
 //goland:noinspection SqlNoDataSourceInspection,SqlResolve
@@ -51,14 +51,17 @@ WHERE login=$1 AND password = crypt($2, password)`); err != nil {
 	return nil
 }
 
-func (g *gophermartPostgresRepository) RegisterUser(ctx context.Context, user UserEntity, password string) (UserEntity, error) {
+func (g *authPostgresRepository) RegisterUser(ctx context.Context, user UserDto, password string) (UserDto, error) {
 	if password == "" {
-		return UserEntity{}, ErrEmptyPassword
+		return UserDto{}, ErrEmptyPassword
 	}
 
-	userWithPwd := UserWithPassword{
-		UserEntity: user,
-		Password:   password,
+	userWithPwd := userWithPassword{
+		userEntity: userEntity{
+			ID:    "",
+			Login: user.Login,
+		},
+		Password: password,
 	}
 
 	row := registerUserStmt.QueryRowContext(ctx, userWithPwd)
@@ -68,28 +71,31 @@ func (g *gophermartPostgresRepository) RegisterUser(ctx context.Context, user Us
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.ConstraintName == "login_unique" {
-				return UserEntity{}, ErrUserAlreadyExists
+				return UserDto{}, ErrUserAlreadyExists
 			}
 		}
-		return UserEntity{}, err
+		return UserDto{}, err
 	}
-	return UserEntity{
-		ID:    userID,
-		Login: user.Login,
+	return UserDto{
+		UserID: userID,
+		Login:  user.Login,
 	}, nil
 }
 
-func (g *gophermartPostgresRepository) Authenticate(ctx context.Context, login string, password string) (UserEntity, error) {
+func (g *authPostgresRepository) Authenticate(ctx context.Context, login string, password string) (UserDto, error) {
 	if password == "" {
-		return UserEntity{}, ErrEmptyPassword
+		return UserDto{}, ErrEmptyPassword
 	}
-	var entity UserEntity
+	var entity userEntity
 	err := authenticateUserStmt.GetContext(ctx, &entity, login, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return UserEntity{}, ErrAuthenticationFailure
+			return UserDto{}, ErrAuthenticationFailure
 		}
-		return UserEntity{}, err
+		return UserDto{}, err
 	}
-	return entity, nil
+	return UserDto{
+		UserID: entity.ID,
+		Login:  entity.Login,
+	}, nil
 }

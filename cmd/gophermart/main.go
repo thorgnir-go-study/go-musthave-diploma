@@ -5,8 +5,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/thorgnir-go-study/go-musthave-diploma/internal/app/config"
-	"github.com/thorgnir-go-study/go-musthave-diploma/internal/app/repository"
+	authRepo "github.com/thorgnir-go-study/go-musthave-diploma/internal/app/repository/auth"
 	"github.com/thorgnir-go-study/go-musthave-diploma/internal/app/server"
+	authService "github.com/thorgnir-go-study/go-musthave-diploma/internal/app/server/auth"
+
 	systemLog "log"
 	"net/http"
 	"os"
@@ -22,12 +24,12 @@ func main() {
 	}
 	configureLogger(*cfg)
 
-	gophermartService, err := createGophermartService(*cfg)
+	authS, err := createAuthService(*cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error while creating service")
 	}
 
-	errC, err := run(gophermartService)
+	errC, err := run(authS)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Couldn't run")
 	}
@@ -38,20 +40,20 @@ func main() {
 
 }
 
-func createGophermartService(cfg config.Config) (*server.GophermartService, error) {
-	repo, err := repository.NewGophermartPostgresRepository(context.Background(), cfg.DatabaseDSN)
+func createAuthService(cfg config.Config) (*authService.Service, error) {
+	authRepository, err := authRepo.NewAuthPostgresRepository(context.Background(), cfg.DatabaseDSN)
 	if err != nil {
 		return nil, err
 	}
 
-	srv := server.NewService(repo, cfg)
+	srv := authService.New(authRepository, cfg)
 	return srv, nil
 }
 
-func run(service *server.GophermartService) (<-chan error, error) {
+func run(authService *authService.Service) (<-chan error, error) {
 	errC := make(chan error, 1)
 
-	srv := server.NewServer(service)
+	srv := server.NewServer(authService)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
 
